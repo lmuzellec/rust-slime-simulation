@@ -1,0 +1,8 @@
+[package]
+name = "rust-slime-simulation"
+version = "0.1.0"
+edition = "2021"
+authors = ["Louis-Muzellec"]
+description = "Rust implementation of the slime simulation"
+
+[dependencies]
