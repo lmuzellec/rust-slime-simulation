@@ -6,3 +6,5 @@ authors = ["Louis-Muzellec"]
 description = "Rust implementation of the slime simulation"
 
 [dependencies]
+bevy = "0.8"
+bytemuck = "1.10"
