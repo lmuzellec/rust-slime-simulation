@@ -13,3 +13,7 @@ Implemented using Rust 1.62.1, Bevy O.8 and WGSL 0.13.0
 ## Documentation used
 
 - [WebGPU Shading Language](https://www.w3.org/TR/WGSL/)
+
+## Example 
+
+https://user-images.githubusercontent.com/57032117/193806572-792c4a7e-8679-48ef-ada9-93455df702cc.mp4
