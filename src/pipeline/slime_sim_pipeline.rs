@@ -4,7 +4,7 @@ use bevy::{
     prelude::{AssetServer, Handle, Shader, World},
     render::{
         render_resource::*,
-        renderer::{RenderContext, RenderDevice, RenderQueue},
+        renderer::{RenderContext, RenderDevice},
     },
 };
 
@@ -40,7 +40,6 @@ pub struct SlimeSimBuffers<'a> {
 impl<'a> Pipeline<'a> for SlimeSimPipeline {
     type CreationSettings = SlimeSimSetup;
     type BindGroupSettings = SlimeSimBuffers<'a>;
-    type UpdateSettings = ();
     type ExecuteSettings = ();
 
     fn new(world: &mut World) -> Self {
@@ -181,8 +180,6 @@ impl<'a> Pipeline<'a> for SlimeSimPipeline {
 
         self.bind_group = Some(bind_group);
     }
-
-    fn update(&self, _queue: &RenderQueue, _update: &Self::UpdateSettings) {}
 
     fn execute(
         &self,

@@ -7,4 +7,6 @@ description = "Rust implementation of the slime simulation"
 
 [dependencies]
 bevy = "0.8"
+bevy_egui = "0.15.0"
 bytemuck = "1.10"
+rand = "0.8.5"

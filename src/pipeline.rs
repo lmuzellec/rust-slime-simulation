@@ -2,7 +2,7 @@ use bevy::{
     prelude::World,
     render::{
         render_resource::PipelineCache,
-        renderer::{RenderContext, RenderDevice, RenderQueue},
+        renderer::{RenderContext, RenderDevice},
     },
 };
 
@@ -14,7 +14,6 @@ pub mod slime_sim_pipeline;
 pub trait Pipeline<'a> {
     type CreationSettings;
     type BindGroupSettings;
-    type UpdateSettings;
     type ExecuteSettings;
 
     fn new(world: &mut World) -> Self;
@@ -24,8 +23,6 @@ pub trait Pipeline<'a> {
         render_device: &RenderDevice,
         settings: &Self::BindGroupSettings,
     );
-
-    fn update(&self, queue: &RenderQueue, update: &Self::UpdateSettings);
 
     fn execute(
         &self,

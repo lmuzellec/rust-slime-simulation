@@ -15,7 +15,8 @@ use crate::{
     compute_render_node::ComputeRenderNode,
     compute_slime_pipeline::{ComputeSlimeBindGroup, ComputeSlimePipeline},
     pipeline::Pipeline,
-    AppSettings,
+    types::AppSettings,
+    AppSettingsUpdated, AppShouldReset,
 };
 
 pub struct ComputePlugin;
@@ -23,6 +24,9 @@ pub struct ComputePlugin;
 impl Plugin for ComputePlugin {
     fn build(&self, app: &mut App) {
         let app_settings = app.world.get_resource::<AppSettings>().cloned().unwrap();
+        app.add_plugin(ExtractResourcePlugin::<AppSettings>::default());
+        app.add_plugin(ExtractResourcePlugin::<AppShouldReset>::default());
+        app.add_plugin(ExtractResourcePlugin::<AppSettingsUpdated>::default());
         app.add_plugin(ExtractResourcePlugin::<ComputeSlimeDisplayImage>::default());
         app.add_plugin(ExtractResourcePlugin::<ComputeSlimeTime>::default());
 
@@ -30,6 +34,7 @@ impl Plugin for ComputePlugin {
         render_app
             .insert_resource(app_settings)
             .init_resource::<ComputeSlimePipeline>()
+            .add_system_to_stage(RenderStage::Prepare, reload_pipeline)
             .add_system_to_stage(RenderStage::Queue, ComputePlugin::queue_bind_group);
 
         let mut render_graph = render_app.world.resource_mut::<RenderGraph>();
@@ -37,6 +42,13 @@ impl Plugin for ComputePlugin {
         render_graph
             .add_node_edge("slime_simulation", CAMERA_DRIVER)
             .unwrap();
+    }
+}
+
+fn reload_pipeline(mut commands: Commands, app_should_reset: Res<AppShouldReset>) {
+    if app_should_reset.0 {
+        commands.remove_resource::<ComputeSlimePipeline>();
+        commands.init_resource::<ComputeSlimePipeline>();
     }
 }
 

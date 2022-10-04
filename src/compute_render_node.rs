@@ -9,10 +9,10 @@ use bevy::{
 
 use crate::{
     compute_plugin::ComputeSlimeTime,
-    compute_slime_pipeline::{ComputeSlimePipeline, ComputeSlimeUpdate},
+    compute_slime_pipeline::{ComputeSlimePipeline, ComputeTimeUpdate},
     pipeline::Pipeline,
-    types::TimeBuffer,
-    AppSettings,
+    types::{AppSettings, TimeBuffer},
+    AppSettingsUpdated,
 };
 
 pub struct ComputeRenderNode {
@@ -40,12 +40,19 @@ impl Node for ComputeRenderNode {
         let render_queue = world.resource::<RenderQueue>();
         let compute_slime_time = world.resource::<ComputeSlimeTime>();
 
+        let app_settings = world.resource::<AppSettings>();
+        let app_settings_updated = world.resource::<AppSettingsUpdated>();
+
         let time_buffer = TimeBuffer {
             time: compute_slime_time.0.seconds_since_startup() as f32,
             delta_time: compute_slime_time.0.delta_seconds(),
         };
 
-        compute_slime_pipeline.update(render_queue, &ComputeSlimeUpdate { time_buffer });
+        if app_settings_updated.0 {
+            compute_slime_pipeline.update_settings(render_queue, app_settings);
+        }
+
+        compute_slime_pipeline.update_time(render_queue, &ComputeTimeUpdate { time_buffer });
         compute_slime_pipeline.update_state(pipeline_cache, &mut self.state);
     }
 

@@ -4,7 +4,7 @@ use bevy::{
     prelude::{AssetServer, Handle, World},
     render::{
         render_resource::*,
-        renderer::{RenderContext, RenderDevice, RenderQueue},
+        renderer::{RenderContext, RenderDevice},
     },
 };
 
@@ -28,7 +28,6 @@ pub struct CopyTextureView<'a> {
 impl<'a> Pipeline<'a> for CopyPipeline {
     type CreationSettings = SizeSettings;
     type BindGroupSettings = CopyTextureView<'a>;
-    type UpdateSettings = ();
     type ExecuteSettings = ();
 
     fn new(world: &mut World) -> Self {
@@ -121,8 +120,6 @@ impl<'a> Pipeline<'a> for CopyPipeline {
 
         self.bind_group = Some(bind_group);
     }
-
-    fn update(&self, _queue: &RenderQueue, _update: &Self::UpdateSettings) {}
 
     fn execute(
         &self,

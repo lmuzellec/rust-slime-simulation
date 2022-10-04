@@ -8,27 +8,23 @@ use bevy::{
     DefaultPlugins,
 };
 use compute_plugin::{ComputePlugin, ComputeSlimeDisplayImage};
+use gui_plugin::GuiPlugin;
+use types::AppSettings;
 
 mod compute_plugin;
 mod compute_render_node;
 mod compute_slime_pipeline;
+mod gui_plugin;
 mod pipeline;
 mod types;
 
 const SIZE: (u32, u32) = (1280, 720);
 
-#[derive(Clone, Copy, ExtractResource, Debug)]
-pub struct AppSettings {
-    width: u32,
-    height: u32,
-    num_agents: u32,
+#[derive(Clone, Copy, ExtractResource)]
+struct AppShouldReset(bool);
 
-    trail_weight: f32,
-    decay_rate: f32,
-    diffuse_rate: f32,
-
-    render_sensors: bool,
-}
+#[derive(Clone, Copy, ExtractResource)]
+struct AppSettingsUpdated(bool);
 
 fn main() {
     App::new()
@@ -38,18 +34,11 @@ fn main() {
             height: SIZE.1 as f32,
             ..default()
         })
-        .insert_resource(AppSettings {
-            width: SIZE.0,
-            height: SIZE.1,
-            num_agents: 100000,
-
-            trail_weight: 1.0,
-            decay_rate: 0.75,
-            diffuse_rate: 5.0,
-
-            render_sensors: false,
-        })
+        .insert_resource(AppSettings::default())
+        .insert_resource(AppShouldReset(false))
+        .insert_resource(AppSettingsUpdated(false))
         .add_plugins(DefaultPlugins)
+        .add_plugin(GuiPlugin)
         .add_plugin(ComputePlugin)
         .add_startup_system(setup)
         .run();

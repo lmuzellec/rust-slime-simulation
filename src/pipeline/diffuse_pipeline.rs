@@ -4,7 +4,7 @@ use bevy::{
     prelude::{AssetServer, Handle, World},
     render::{
         render_resource::*,
-        renderer::{RenderContext, RenderDevice, RenderQueue},
+        renderer::{RenderContext, RenderDevice},
     },
 };
 
@@ -34,7 +34,6 @@ pub struct DiffuseBuffers<'a> {
 impl<'a> Pipeline<'a> for DiffusePipeline {
     type CreationSettings = SizeSettings;
     type BindGroupSettings = DiffuseBuffers<'a>;
-    type UpdateSettings = ();
     type ExecuteSettings = ();
 
     fn new(world: &mut World) -> Self {
@@ -160,8 +159,6 @@ impl<'a> Pipeline<'a> for DiffusePipeline {
 
         self.bind_group = Some(bind_group);
     }
-
-    fn update(&self, _queue: &RenderQueue, _update: &Self::UpdateSettings) {}
 
     fn execute(
         &self,

@@ -8,6 +8,7 @@ use bevy::{
 use copy_pipeline::CopyPipeline;
 use diffuse_pipeline::DiffusePipeline;
 use draw_sensor_pipeline::DrawSensorPipeline;
+use rand::Rng;
 
 use crate::{
     compute_render_node::ComputeSlimeState,
@@ -18,8 +19,10 @@ use crate::{
         slime_sim_pipeline::{SlimeSimBuffers, SlimeSimSetup},
         Pipeline, SlimeSimPipeline,
     },
-    types::{Agent, DiffuseSettings, SizeSettings, SlimeSettings, SpeciesSettings, TimeBuffer},
-    AppSettings,
+    types::{
+        Agent, AgentDistribution, AppSettings, DiffuseSettings, SizeSettings, SlimeSettings,
+        TimeBuffer,
+    },
 };
 
 pub struct ComputeSlimePipeline {
@@ -52,11 +55,46 @@ pub struct ComputeSlimeBindGroup<'a> {
     pub display_texture_view: &'a TextureView,
 }
 
-pub struct ComputeSlimeUpdate {
+pub struct ComputeTimeUpdate {
     pub time_buffer: TimeBuffer,
 }
 
 impl ComputeSlimePipeline {
+    pub fn update_settings(&self, queue: &RenderQueue, app_settings: &AppSettings) {
+        let diffuse_settings = DiffuseSettings {
+            decay_rate: app_settings.decay_rate,
+            diffuse_rate: app_settings.diffuse_rate,
+        };
+
+        queue.write_buffer(
+            &self.diffuse_buffer,
+            0,
+            bytemuck::bytes_of(&diffuse_settings),
+        );
+
+        let slime_settings = SlimeSettings {
+            num_agents: app_settings.num_agents,
+            trail_weight: app_settings.trail_weight,
+            memory_offset_1: 0,
+            memory_offset_2: 0,
+            species_settings: app_settings.species_settings,
+        };
+
+        queue.write_buffer(
+            &self.settings_buffer,
+            0,
+            bytemuck::bytes_of(&slime_settings),
+        );
+    }
+
+    pub fn update_time(&self, queue: &RenderQueue, update: &ComputeTimeUpdate) {
+        queue.write_buffer(
+            &self.time_buffer,
+            0,
+            bytemuck::bytes_of(&update.time_buffer),
+        );
+    }
+
     pub fn update_state(&self, pipeline_cache: &PipelineCache, state: &mut ComputeSlimeState) {
         match state {
             ComputeSlimeState::Init => {
@@ -110,25 +148,68 @@ impl ComputeSlimePipeline {
 impl<'a> Pipeline<'a> for ComputeSlimePipeline {
     type CreationSettings = AppSettings;
     type BindGroupSettings = ComputeSlimeBindGroup<'a>;
-    type UpdateSettings = ComputeSlimeUpdate;
     type ExecuteSettings = AppSettings;
 
     fn new(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
         let app_settings = world.resource::<AppSettings>();
-        let agents: Vec<Agent> = (0..app_settings.num_agents)
-            .into_iter()
-            .map(|i| {
-                let angle: f32 = 2.0 * 3.1415 / (app_settings.num_agents as f32) * i as f32;
-                let x = app_settings.width as f32 / 2.0 + angle.cos() * 100.0;
-                let y = app_settings.height as f32 / 2.0 + angle.sin() * 100.0;
-                Agent {
-                    position: [x, y],
-                    angle: 3.1415 + angle,
-                    species_index: 0,
-                }
-            })
-            .collect::<Vec<_>>();
+
+        let agents: Vec<Agent> = match app_settings.agent_distribution {
+            AgentDistribution::InnerCircle => (0..app_settings.num_agents)
+                .into_iter()
+                .map(|i| {
+                    let angle: f32 = 2.0 * 3.1415 / (app_settings.num_agents as f32) * i as f32;
+                    let x = app_settings.width as f32 / 2.0 + angle.cos() * 200.0;
+                    let y = app_settings.height as f32 / 2.0 + angle.sin() * 200.0;
+                    Agent {
+                        position: [x, y],
+                        angle: 3.1415 + angle,
+                        species_index: 0,
+                    }
+                })
+                .collect::<Vec<_>>(),
+            AgentDistribution::OuterCircle => (0..app_settings.num_agents)
+                .into_iter()
+                .map(|i| {
+                    let angle: f32 = 2.0 * 3.1415 / (app_settings.num_agents as f32) * i as f32;
+                    let x = app_settings.width as f32 / 2.0 + angle.cos() * 200.0;
+                    let y = app_settings.height as f32 / 2.0 + angle.sin() * 200.0;
+                    Agent {
+                        position: [x, y],
+                        angle: angle,
+                        species_index: 0,
+                    }
+                })
+                .collect::<Vec<_>>(),
+            AgentDistribution::InnerDisk => (0..app_settings.num_agents)
+                .into_iter()
+                .map(|_| {
+                    let angle: f32 = rand::thread_rng().gen::<f32>() * 2.0 * 3.1415;
+                    let x = app_settings.width as f32 / 2.0
+                        + angle.cos() * rand::thread_rng().gen::<f32>() * 200.0;
+                    let y = app_settings.height as f32 / 2.0
+                        + angle.sin() * rand::thread_rng().gen::<f32>() * 200.0;
+                    Agent {
+                        position: [x, y],
+                        angle: angle + 3.1415,
+                        species_index: 0,
+                    }
+                })
+                .collect::<Vec<_>>(),
+            AgentDistribution::Random => (0..app_settings.num_agents)
+                .into_iter()
+                .map(|_| {
+                    let angle: f32 = rand::thread_rng().gen::<f32>() * 2.0 * 3.1415;
+                    let x = rand::thread_rng().gen::<f32>() * app_settings.width as f32;
+                    let y = rand::thread_rng().gen::<f32>() * app_settings.height as f32;
+                    Agent {
+                        position: [x, y],
+                        angle: angle,
+                        species_index: 0,
+                    }
+                })
+                .collect::<Vec<_>>(),
+        };
 
         let size_settings = SizeSettings {
             width: app_settings.width,
@@ -146,7 +227,7 @@ impl<'a> Pipeline<'a> for ComputeSlimePipeline {
             memory_offset_1: 0,
             memory_offset_2: 0,
 
-            species_settings: [SpeciesSettings::default(); 4],
+            species_settings: app_settings.species_settings,
         };
 
         let time = TimeBuffer {
@@ -157,25 +238,25 @@ impl<'a> Pipeline<'a> for ComputeSlimePipeline {
         let agents_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("Agents buffer"),
             contents: bytemuck::cast_slice(&agents),
-            usage: BufferUsages::STORAGE,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
 
         let size_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("Size buffer"),
             contents: bytemuck::bytes_of(&size_settings),
-            usage: BufferUsages::UNIFORM,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
         let diffuse_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("Diffuse buffer"),
             contents: bytemuck::bytes_of(&diffuse_settings),
-            usage: BufferUsages::UNIFORM,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
         let settings_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("Settings buffer"),
             contents: bytemuck::bytes_of(&slime_settings),
-            usage: BufferUsages::UNIFORM,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
         let time_buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
@@ -389,14 +470,6 @@ impl<'a> Pipeline<'a> for ComputeSlimePipeline {
 
         self.copy_sensor_to_render_display_pipeline
             .queue_bind_group(render_device, &copy_sensor_to_render_display);
-    }
-
-    fn update(&self, queue: &RenderQueue, update: &Self::UpdateSettings) {
-        queue.write_buffer(
-            &self.time_buffer,
-            0,
-            bytemuck::bytes_of(&update.time_buffer),
-        );
     }
 
     fn execute(
